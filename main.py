@@ -1,15 +1,30 @@
 import cv2
 import numpy as np
 import mediapipe as mp
+from gtts import gTTS
+import os
+import platform
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
+
+#输入想要在姿势不正确时播放的语音
+text = "Raise up your head!"
+tts = gTTS(text=text, lang='en')  
+tts.save("test.mp3")
 
 # 初始化摄像头
 cap = cv2.VideoCapture(0)
 
 # 头部倾斜角度阈值 
-ANGLE_THRESHOLD = 180
+ANGLE_THRESHOLD = 170
+
+#计时器清零
+timer = 0 
+
+#文本颜色
+custom_color = (61,139,110) 
+
 
 
 def calculate_angle(a,b,c):
@@ -45,17 +60,26 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             left_eye_inner = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_EYE_INNER]
             
             left_angle = calculate_angle(left_ear, left_eye_outer, left_eye_inner)
-            cv2.putText(image, f'left: {left_angle}', (20,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+            cv2.putText(image, f'left: {left_angle}', (20,50), cv2.FONT_HERSHEY_SIMPLEX, 1, custom_color, 2)
 
             right_ear = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_EAR]
             right_eye_outer = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_EYE_OUTER]
             right_eye_inner = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_EYE_INNER]
             
             right_angle = calculate_angle(right_eye_inner, right_eye_outer, right_ear)
-            cv2.putText(image, f'right: {right_angle}', (20,100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+            cv2.putText(image, f'right: {right_angle}', (20,100), cv2.FONT_HERSHEY_SIMPLEX, 1, custom_color, 2)
 
+            #如果姿势不正确
             if left_angle > ANGLE_THRESHOLD or right_angle > ANGLE_THRESHOLD:
-                cv2.putText(image, 'raise up your head!', (20,150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+                timer += 1
+                cv2.putText(image,  f'time: {timer}', (20,150), cv2.FONT_HERSHEY_SIMPLEX, 1, custom_color, 2)
+                #播放语音
+                if timer >= 100: 
+                    os.system("say " + text) 
+                    timer = 0
+
+            else:
+                timer = 0
 
         cv2.imshow('Pose Estimation', image)
 
